@@ -1,0 +1,16 @@
+# Global code owners
+# Todas las modificaciones requieren aprobación de lraigosov
+* @lraigosov
+
+# Archivos críticos de configuración
+*.json @lraigosov
+*.md @lraigosov
+.gitignore @lraigosov
+
+# Código Python del sistema de descubrimiento
+descubrimiento/*.py @lraigosov
+descubrimiento/*.json @lraigosov
+descubrimiento/*.txt @lraigosov
+
+# Documentación
+*.md @lraigosov
