@@ -1,0 +1,18 @@
+{
+  "Colombia": {
+    "platform": "socrata",
+    "domains": ["www.datos.gov.co"]
+  },
+  "México": {
+    "platform": "ckan",
+    "base_url": "https://datos.gob.mx"
+  },
+  "Chile": {
+    "platform": "ckan",
+    "base_url": "https://datos.gob.cl"
+  },
+  "Ecuador": {
+    "platform": "ckan",
+    "base_url": "https://datosabiertos.gob.ec"
+  }
+}
