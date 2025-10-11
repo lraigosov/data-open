@@ -11,15 +11,23 @@ Este módulo consulta múltiples APIs para inventariar datasets de portales de d
 - Dependencias: ver `requirements.txt`
 - App Token (recomendado) para cabecera `X-App-Token` para evitar límites de tasa
 
-## Configurar token
-Se detecta en el siguiente orden:
-1. Variable de entorno `SOCRATA_APP_TOKEN`
-2. Archivo `../secretos.json` con llaves `AppToken` o `APIKeyID`
+## Configurar credenciales
 
+### Opción 1: Archivo de configuración (Recomendado)
+1. Copia el archivo de ejemplo: `cp ../secretos.json.example ../secretos.json`
+2. Edita `../secretos.json` con tus credenciales reales
+3. El archivo `secretos.json` está protegido por `.gitignore`
+
+### Opción 2: Variable de entorno
 En PowerShell (Windows):
 ```powershell
 $env:SOCRATA_APP_TOKEN = "<tu_token>"
 ```
+
+### Detección automática
+El sistema busca credenciales en este orden:
+1. Variable de entorno `SOCRATA_APP_TOKEN`
+2. Archivo `../secretos.json` con llaves `socrata_app_token`, `AppToken` o `APIKeyID`
 
 ## Plataformas soportadas
 El proyecto maneja múltiples tecnologías:
