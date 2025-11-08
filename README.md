@@ -1,15 +1,13 @@
 # Data Open - Herramientas para Datos Abiertos LATAM
 
-Este repositorio contiene herramientas y documentación para trabajar con portales de datos abiertos de Latinoamérica.
+Herramientas y documentación para trabajar con portales de datos abiertos de Latinoamérica.
 
 ## 📁 Estructura del proyecto
 
 ```
 data-open/
 ├── README.md                    # Este archivo
-├── .gitignore                   # Archivos ignorados por Git  
 ├── secretos.json.example        # Plantilla de configuración
-├── secretos.json               # Credenciales (ignorado por Git)
 ├── data_socrata.md             # Documentación de Socrata API
 ├── uso_api_socrata.md          # Guía de uso de Socrata
 └── descubrimiento/             # Sistema de descubrimiento multi-país
@@ -28,6 +26,8 @@ data-open/
 ```bash
 # Crear entorno virtual
 python -m venv .venv
+
+# Activar entorno
 .venv\Scripts\activate  # Windows
 source .venv/bin/activate  # Linux/Mac
 
@@ -50,7 +50,7 @@ cp secretos.json.example secretos.json
 # Consultar todos los países con límite de 10 registros
 python run_discovery.py --limit 10
 
-# Consultar país específico con filtro de fecha
+# Consultar país específico
 python run_discovery.py --country COL --published-from 2024-01-01
 
 # Ver todas las opciones
@@ -65,8 +65,6 @@ python run_discovery.py --help
 | 🇲🇽 México | MEX | CKAN | datos.gob.mx | ✅ Funcional |
 | 🇨🇱 Chile | CHL | CKAN | datos.gob.cl | ✅ Funcional |
 | 🇪🇨 Ecuador | ECU | CKAN | datosabiertos.gob.ec | ✅ Funcional |
-| 🇵🇪 Perú | PER | DKAN/Custom | datosabiertos.gob.pe | ⚠️ Requiere desarrollo |
-| 🇧🇷 Brasil | BRA | Custom | dados.gov.br | ⚠️ Requiere desarrollo |
 
 ## 📚 Documentación
 
@@ -74,14 +72,12 @@ python run_discovery.py --help
 - **[Socrata API](data_socrata.md)**: Documentación técnica de Socrata
 - **[Uso Socrata](uso_api_socrata.md)**: Guía práctica de uso
 
-## 🔧 Configuración avanzada
+## 🔧 Configuración
 
 ### Credenciales (secretos.json)
 ```json
 {
-  "socrata_app_token": "tu_token_aqui",
-  "socrata_username": "opcional@example.com", 
-  "socrata_password": "opcional_para_consultas_publicas"
+  "socrata_app_token": "tu_token_aqui"
 }
 ```
 
@@ -96,19 +92,9 @@ python run_discovery.py --help
 ## 🤝 Contribuir
 
 1. Fork del repositorio
-2. Crear rama de feature: `git checkout -b feature/nueva-funcionalidad`
-3. Commit de cambios: `git commit -am 'Agregar nueva funcionalidad'`
-4. Push a la rama: `git push origin feature/nueva-funcionalidad`
+2. Crear rama: `git checkout -b feature/nueva-funcionalidad`
+3. Commit: `git commit -am 'Agregar nueva funcionalidad'`
+4. Push: `git push origin feature/nueva-funcionalidad`
 5. Crear Pull Request
 
-## 📄 Licencia
-
-Este proyecto está bajo licencia MIT. Ver archivo LICENSE para detalles.
-
-## 🏗️ Roadmap
-
-- [ ] Integración con Perú (DKAN)
-- [ ] Integración con Brasil (plataforma custom)
-- [ ] Dashboard web para visualización
-- [ ] API REST para consultas
-- [ ] Integración con más países LATAM
+**Nota**: La rama `master` está protegida y requiere aprobación de @lraigosov.

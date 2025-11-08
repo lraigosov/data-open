@@ -1,6 +1,6 @@
-# Descubrimiento datasets LATAM
+# Descubrimiento de Datasets LATAM
 
-Este módulo consulta múltiples APIs para inventariar datasets de portales de datos abiertos:
+Sistema de consulta a múltiples APIs para inventariar datasets de portales de datos abiertos:
 - **Colombia**: Socrata Discovery API (www.datos.gov.co)
 - **México**: CKAN API (datos.gob.mx)
 - **Chile**: CKAN API (datos.gob.cl)
@@ -8,57 +8,56 @@ Este módulo consulta múltiples APIs para inventariar datasets de portales de d
 
 ## Requisitos
 - Python 3.9+
-- Dependencias: ver `requirements.txt`
-- App Token (recomendado) para cabecera `X-App-Token` para evitar límites de tasa
+- Dependencias: `requests>=2.31`
+- Token de Socrata (recomendado) para evitar límites de tasa
 
 ## Configurar credenciales
 
 ### Opción 1: Archivo de configuración (Recomendado)
-1. Copia el archivo de ejemplo: `cp ../secretos.json.example ../secretos.json`
-2. Edita `../secretos.json` con tus credenciales reales
-3. El archivo `secretos.json` está protegido por `.gitignore`
+```bash
+cp ../secretos.json.example ../secretos.json
+# Editar con tus credenciales
+```
 
 ### Opción 2: Variable de entorno
-En PowerShell (Windows):
 ```powershell
-$env:SOCRATA_APP_TOKEN = "<tu_token>"
+$env:SOCRATA_APP_TOKEN = "tu_token"
 ```
 
 ### Detección automática
-El sistema busca credenciales en este orden:
+Busca credenciales en este orden:
 1. Variable de entorno `SOCRATA_APP_TOKEN`
-2. Archivo `../secretos.json` con llaves `socrata_app_token`, `AppToken` o `APIKeyID`
+2. Archivo `../secretos.json` con llave `socrata_app_token`
 
 ## Plataformas soportadas
-El proyecto maneja múltiples tecnologías:
 
 ### Colombia (Socrata)
-- Plataforma: Socrata Discovery API
+- API: Socrata Discovery API
 - Dominio: `www.datos.gov.co`
-- Filtros: por dominio, categorías, términos de búsqueda
+- Autenticación: Token requerido
+- Paginación: 100 registros/solicitud
 
 ### México (CKAN)  
-- Plataforma: CKAN API (Sistema Ajolote)
-- URL base: `https://datos.gob.mx`
-- Filtros: por grupos/categorías, organización, términos de búsqueda
+- API: CKAN package_search
+- URL: `https://datos.gob.mx`
+- Autenticación: No requerida
+- Paginación: 1000 registros/solicitud
 
 ### Chile (CKAN)
-- Plataforma: CKAN API
-- URL base: `https://datos.gob.cl`
-- Filtros: por grupos/categorías, organización, términos de búsqueda
+- API: CKAN package_search
+- URL: `https://datos.gob.cl`
+- Autenticación: No requerida
 - Total datasets: ~2,769
 
 ### Ecuador (CKAN)
-- Plataforma: CKAN API  
-- URL base: `https://datosabiertos.gob.ec`
-- Filtros: por grupos/categorías, organización, términos de búsqueda
+- API: CKAN package_search  
+- URL: `https://datosabiertos.gob.ec`
+- Autenticación: No requerida
 - Total datasets: ~1,509
 
-### Limitaciones conocidas
-- **Perú**: Usa DKAN/plataforma custom, API CKAN no disponible
-- **Brasil**: Usa plataforma custom, API CKAN no disponible
+## Configuración
 
-Configuración en `latam_domains.json`:
+### Archivo latam_domains.json
 ```json
 {
   "Colombia": {
@@ -80,46 +79,49 @@ Configuración en `latam_domains.json`:
 }
 ```
 
-## Configuración de fechas
-Puedes definir un rango de publicación en `config.json`:
-
-```
+### Archivo config.json
+```json
 {
-	"published_from": "2023-01-01",
-	"published_to": "2025-12-31"
+  "published_from": "2024-01-01",
+  "published_to": "2025-12-31"
 }
 ```
 
-Además, puedes sobrescribirlo por CLI:
+## Uso
 
-```powershell
-python .\descubrimiento\run_discovery.py --country Colombia --published-from 2024-01-01 --published-to 2024-12-31
+### Instalación
+```bash
+pip install -r requirements.txt
 ```
 
-## Uso rápido
-Instala dependencias y ejecuta el script principal:
+### Ejecución básica
+```bash
+# Todos los países
+python run_discovery.py
 
-```powershell
-# Desde la carpeta del repo
-python -m pip install -r .\descubrimiento\requirements.txt
-python .\descubrimiento\run_discovery.py
+# País específico
+python run_discovery.py --country Colombia
+
+# Con filtros de fecha
+python run_discovery.py --country México --published-from 2024-01-01 --published-to 2024-12-31
+
+# Buscar por término
+python run_discovery.py --q salud --limit 50
 ```
 
-Parámetros útiles:
-- `--country <País>`: procesa un país específico como Colombia, México, Chile o Ecuador (por defecto procesa todos los países configurados).
-- `--q <texto>`: término de búsqueda global.
-- `--categories <cat1> <cat2>`: filtrar por categorías del catálogo.
-- `--limit <n>`: máximo de items por dominio (por defecto 1000).
+### Parámetros CLI
+- `--country <País>`: Colombia, México, Chile o Ecuador
+- `--q <texto>`: Término de búsqueda
+- `--categories <cat1> <cat2>`: Filtrar por categorías
+- `--limit <n>`: Máximo de registros (default: 1000)
+- `--published-from <YYYY-MM-DD>`: Fecha inicio
+- `--published-to <YYYY-MM-DD>`: Fecha fin
 
 ## Salida
-Los resultados se guardan en `descubrimiento/output/` con nombre:
-- `<pais>_catalog.json` y `<pais>_catalog.csv`: registros normalizados del catálogo.
-- `<pais>_summary.csv`: métricas agregadas por tipo y categoría.
 
-Ejemplos: `colombia_catalog.json`, `méxico_catalog.csv`, `chile_catalog.json`, `ecuador_summary.csv`
+Resultados en `descubrimiento/output/`:
+- `<pais>_catalog.json`: Datos completos en JSON
+- `<pais>_catalog.csv`: Datos completos en CSV
+- `<pais>_summary.csv`: Resumen por tipo y categoría
 
-## Notas técnicas
-- **Socrata (Colombia)**: Paginación hasta 100 registros por solicitud; requiere token para evitar rate limiting.
-- **CKAN (México, Chile, Ecuador)**: Paginación hasta 1000 registros por solicitud; no requiere autenticación.
-- Todos los clientes normalizan campos clave para generar outputs compatibles.
-- El filtro por fecha se aplica localmente tras obtener los datos (las APIs no siempre soportan filtros de fecha nativos).
+Ejemplos: `colombia_catalog.json`, `méxico_catalog.csv`, `chile_summary.csv`
