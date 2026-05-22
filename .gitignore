@@ -125,3 +125,6 @@ Thumbs.db
 *.bak
 *.backup
 *.old
+
+# Devlog local de sesiones
+devlog.md

@@ -6,6 +6,10 @@ Sistema de consulta a múltiples APIs para inventariar datasets de portales de d
 - **Chile**: CKAN API (datos.gob.cl)
 - **Ecuador**: CKAN API (datosabiertos.gob.ec)
 
+## Qué resuelve
+
+Unifica la consulta de catálogos en plataformas heterogéneas (Socrata y CKAN), normaliza metadatos y exporta resultados en formatos de análisis para acelerar inventarios regionales de datos abiertos.
+
 ## Requisitos
 - Python 3.9+
 - Dependencias: `requests>=2.31`
@@ -117,6 +121,15 @@ python run_discovery.py --q salud --limit 50
 - `--published-from <YYYY-MM-DD>`: Fecha inicio
 - `--published-to <YYYY-MM-DD>`: Fecha fin
 
+### Métricas de ejecución (CLI)
+
+Por cada país se imprimen métricas operativas:
+
+1. `tiempo`: duración total de consulta y exportación.
+2. `requests`: cantidad de solicitudes HTTP realizadas.
+3. `retries`: reintentos HTTP observados durante la ejecución.
+4. `filtrados`: registros descartados y su porcentaje sobre el total bruto.
+
 ## Salida
 
 Resultados en `descubrimiento/output/`:
@@ -124,4 +137,20 @@ Resultados en `descubrimiento/output/`:
 - `<pais>_catalog.csv`: Datos completos en CSV
 - `<pais>_summary.csv`: Resumen por tipo y categoría
 
-Ejemplos: `colombia_catalog.json`, `méxico_catalog.csv`, `chile_summary.csv`
+Ejemplos: `colombia_catalog.json`, `mexico_catalog.csv`, `chile_summary.csv`
+
+## Mejoras y optimizaciones recientes
+
+1. Sesiones HTTP reutilizables para Socrata y CKAN (menos overhead de conexiones).
+2. Reintentos automáticos con backoff ante errores transitorios (429/5xx).
+3. Soporte de `socrata_app_token` desde [../secretos.json.example](../secretos.json.example).
+4. Deduplicación de resultados antes de exportar.
+5. Normalización ASCII en nombres de archivos para mayor portabilidad.
+
+## Pruebas
+
+Desde la raíz del repositorio:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
