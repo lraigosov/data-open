@@ -4,6 +4,39 @@ from typing import Dict, Any, Generator, List, Optional
 from datetime import datetime
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+
+def _build_session() -> requests.Session:
+    """Crea una sesion HTTP con reintentos para reducir fallos transitorios."""
+    session = requests.Session()
+    retries = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        status=3,
+        backoff_factor=0.5,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset({"GET"}),
+    )
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
+def _update_http_stats(stats: Optional[Dict[str, int]], resp: requests.Response) -> None:
+    if stats is None:
+        return
+    stats["requests"] = stats.get("requests", 0) + 1
+    retries_used = 0
+    raw = getattr(resp, "raw", None)
+    retries = getattr(raw, "retries", None)
+    history = getattr(retries, "history", None)
+    if history:
+        retries_used = len(history)
+    stats["retries"] = stats.get("retries", 0) + retries_used
 
 
 def query_ckan_catalog(base_url: str = "https://datos.gob.mx",
@@ -12,7 +45,9 @@ def query_ckan_catalog(base_url: str = "https://datos.gob.mx",
                        groups: Optional[List[str]] = None,
                        start: int = 0,
                        rows: int = 100,
-                       max_pages: int = 50) -> Generator[Dict[str, Any], None, None]:
+                       max_pages: int = 50,
+                       session: Optional[requests.Session] = None,
+                       stats: Optional[Dict[str, int]] = None) -> Generator[Dict[str, Any], None, None]:
     """
     Generador que recorre la API CKAN package_search devolviendo packages (datasets).
     - base_url: URL base del portal CKAN (ej. "https://datos.gob.mx").
@@ -42,9 +77,11 @@ def query_ckan_catalog(base_url: str = "https://datos.gob.mx",
         else:
             params["fq"] = f"({group_filter})"
     
+    local_session = session or _build_session()
     for page in range(max_pages):
         try:
-            resp = requests.get(endpoint, params=params, timeout=30)
+            resp = local_session.get(endpoint, params=params, timeout=30)
+            _update_http_stats(stats, resp)
             resp.raise_for_status()
             data = resp.json()
             
@@ -110,15 +147,25 @@ def normalize_ckan_result(item: Dict[str, Any], base_url: str = "https://datos.g
 def fetch_ckan_by_config(base_url: str = "https://datos.gob.mx",
                          q: Optional[str] = None,
                          groups: Optional[List[str]] = None,
-                         per_query_limit: int = 1000) -> List[Dict[str, Any]]:
+                         per_query_limit: int = 1000,
+                         stats: Optional[Dict[str, int]] = None) -> List[Dict[str, Any]]:
     """
     Consulta CKAN y devuelve una lista de resultados normalizados.
     Limita el total por consulta para evitar respuestas enormes.
     """
     all_rows: List[Dict[str, Any]] = []
     count = 0
+    session = _build_session()
     
-    for item in query_ckan_catalog(base_url=base_url, q=q, groups=groups, rows=100, max_pages=100):
+    for item in query_ckan_catalog(
+        base_url=base_url,
+        q=q,
+        groups=groups,
+        rows=100,
+        max_pages=100,
+        session=session,
+        stats=stats,
+    ):
         all_rows.append(normalize_ckan_result(item, base_url))
         count += 1
         if count >= per_query_limit:

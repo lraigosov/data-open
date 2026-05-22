@@ -3,9 +3,42 @@ import json
 from typing import Dict, Any, Generator, List, Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 DISCOVERY_BASE = os.environ.get("SOCRATA_DISCOVERY_BASE", "https://api.us.socrata.com/api/catalog/v1")
+
+
+def _build_session() -> requests.Session:
+    """Crea una sesion HTTP con reintentos para llamadas mas estables."""
+    session = requests.Session()
+    retries = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        status=3,
+        backoff_factor=0.5,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset({"GET"}),
+    )
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
+def _update_http_stats(stats: Optional[Dict[str, int]], resp: requests.Response) -> None:
+    if stats is None:
+        return
+    stats["requests"] = stats.get("requests", 0) + 1
+    retries_used = 0
+    raw = getattr(resp, "raw", None)
+    retries = getattr(raw, "retries", None)
+    history = getattr(retries, "history", None)
+    if history:
+        retries_used = len(history)
+    stats["retries"] = stats.get("retries", 0) + retries_used
 
 
 def load_app_token(secret_file: str = os.path.join(os.path.dirname(__file__), "..", "secretos.json")) -> Optional[str]:
@@ -23,7 +56,14 @@ def load_app_token(secret_file: str = os.path.join(os.path.dirname(__file__), ".
             text = f.read().strip()
             try:
                 data = json.loads(text)
-                for k in ("AppToken", "APIKeyID", "APIKeyId", "api_key", "token"):
+                for k in (
+                    "socrata_app_token",
+                    "AppToken",
+                    "APIKeyID",
+                    "APIKeyId",
+                    "api_key",
+                    "token",
+                ):
                     if isinstance(data, dict) and k in data and data[k]:
                         return str(data[k])
             except json.JSONDecodeError:
@@ -45,7 +85,9 @@ def query_catalog(domain: Optional[str] = None,
                   categories: Optional[List[str]] = None,
                   limit: int = 100,
                   max_pages: int = 50,
-                  app_token: Optional[str] = None) -> Generator[Dict[str, Any], None, None]:
+                  app_token: Optional[str] = None,
+                  session: Optional[requests.Session] = None,
+                  stats: Optional[Dict[str, int]] = None) -> Generator[Dict[str, Any], None, None]:
     """
     Generador que recorre la Discovery API devolviendo items del catálogo.
     - domain: restringe por dominio (e.g. "www.datos.gov.co").
@@ -72,9 +114,11 @@ def query_catalog(domain: Optional[str] = None,
         # La API acepta categories como lista repetida o CSV; probamos CSV
         params["categories"] = ",".join(categories)
 
+    local_session = session or _build_session()
     for page in range(max_pages):
         try:
-            resp = requests.get(DISCOVERY_BASE, params=params, headers=headers, timeout=30)
+            resp = local_session.get(DISCOVERY_BASE, params=params, headers=headers, timeout=30)
+            _update_http_stats(stats, resp)
             resp.raise_for_status()
             data = resp.json()
         except requests.exceptions.HTTPError as e:
@@ -122,15 +166,26 @@ def normalize_result(item: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def fetch_by_domains(domains: List[str], q: Optional[str] = None, categories: Optional[List[str]] = None,
-                     per_domain_limit: int = 500, app_token: Optional[str] = None) -> List[Dict[str, Any]]:
+                     per_domain_limit: int = 500, app_token: Optional[str] = None,
+                     stats: Optional[Dict[str, int]] = None) -> List[Dict[str, Any]]:
     """
     Consulta el catálogo para una lista de dominios y devuelve una lista de resultados normalizados.
     Limita el total por dominio para evitar respuestas enormes por defecto.
     """
     all_rows: List[Dict[str, Any]] = []
+    session = _build_session()
     for domain in domains:
         count = 0
-        for item in query_catalog(domain=domain, q=q, categories=categories, limit=100, max_pages=100, app_token=app_token):
+        for item in query_catalog(
+            domain=domain,
+            q=q,
+            categories=categories,
+            limit=100,
+            max_pages=100,
+            app_token=app_token,
+            session=session,
+            stats=stats,
+        ):
             all_rows.append(normalize_result(item))
             count += 1
             if count >= per_domain_limit:
